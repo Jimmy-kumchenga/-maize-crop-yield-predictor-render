@@ -1,76 +1,82 @@
 import streamlit as st
 import pandas as pd
-import joblib
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 import os
-
-# Set page title
-st.set_page_config(page_title="Malawi Maize Yield Predictor", page_icon="🌽")
 
 # Title
 st.title("🌽 Malawi Maize Yield Predictor")
-st.write("Provide basic farm details to estimate **yield (kg/ha)**.")
+st.write("Provide farm details to estimate **yield (kg/ha)**.")
 
-# Load the model
-MODEL_PATH = "improved_rf_yield_model.pkl"  # Change this if you're using a different model file name
-model = joblib.load(MODEL_PATH)
+# Load dataset
+DATA_PATH = "synthetic_malawi_maize.csv"
 
-# Collect user inputs
-with st.form("yield_form"):
-    st.subheader("Farm Inputs")
+@st.cache_data
+def load_data():
+    return pd.read_csv(DATA_PATH)
 
-    year = st.selectbox("Year", list(range(2011, 2026))[::-1])
+df = load_data()
 
-    maize_type = st.selectbox("Type of Maize", ["Hybrid", "Local", "OPV"])
-    region = st.selectbox("Region", ["Northern", "Central", "Southern"])
-    soil_quality = st.selectbox("Soil Quality", ["Poor", "Average", "Excellent"])
-    fertilizer_type = st.selectbox("Fertilizer Type", ["Organic", "Inorganic", "Mixed"])
+# Preprocess
+df.dropna(inplace=True)
 
-    irrigated = st.radio("Is the farm irrigated?", ["Yes", "No"])
-    rotation = st.radio("Do you practice crop rotation?", ["Yes", "No"])
+X = df.drop("Yield_kg_ha", axis=1)
+y = df["Yield_kg_ha"]
 
-    farmer_experience = st.slider("Farmer Experience (years)", 0, 40, 5)
-    area = st.slider("Farm Size (ha)", 0.1, 10.0, 1.0)
-    rainfall = st.slider("Estimated Rainfall (mm)", 300, 2000, 1000)
-    temperature = st.slider("Average Temperature (°C)", 18.0, 35.0, 25.0)
-    fertilizer_kg_ha = st.slider("Fertilizer Used (kg/ha)", 0, 500, 150)
+categorical_features = ["Maize_Type", "Region", "Soil_Quality", "Fertilizer_Type"]
+binary_features = ["Irrigated", "Crop_Rotation"]
+numeric_features = ["Year", "Farmer_Experience", "Area_ha", "Rainfall_mm", "Avg_Temp_C", "Fertilizer_kg_ha"]
 
-    submitted = st.form_submit_button("📈 Predict Yield")
+preprocessor = ColumnTransformer(transformers=[
+    ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features),
+    ("bin", "passthrough", binary_features),
+    ("num", StandardScaler(), numeric_features)
+])
 
-# When form is submitted
-if submitted:
-    # Convert binary fields
-    irrigated_bin = 1 if irrigated == "Yes" else 0
-    rotation_bin = 1 if rotation == "Yes" else 0
+model_pipeline = Pipeline(steps=[
+    ("preprocessor", preprocessor),
+    ("regressor", RandomForestRegressor(n_estimators=100, random_state=42))
+])
 
-    # Create input DataFrame with correct feature order
-    input_data = pd.DataFrame([{
+# Train model
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+model_pipeline.fit(X_train, y_train)
+
+# User Input
+st.subheader("🌾 Enter your farm details")
+
+year = st.slider("Year", 2011, 2025, 2024)
+maize_type = st.selectbox("Maize Type", df["Maize_Type"].unique())
+region = st.selectbox("Region", df["Region"].unique())
+soil_quality = st.selectbox("Soil Quality", df["Soil_Quality"].unique())
+fertilizer_type = st.selectbox("Fertilizer Type", df["Fertilizer_Type"].unique())
+irrigated = st.selectbox("Is the land irrigated?", [0, 1])
+crop_rotation = st.selectbox("Crop rotation practiced?", [0, 1])
+experience = st.number_input("Farmer experience (years)", 0, 50, 5)
+area = st.number_input("Farm size (ha)", 0.1, 100.0, 1.0)
+rainfall = st.slider("Estimated rainfall (mm)", 500, 2000, 1000)
+temperature = st.slider("Estimated average temp (°C)", 15.0, 35.0, 24.5)
+fertilizer_kg = st.slider("Fertilizer used (kg/ha)", 0, 300, 50)
+
+# Predict
+if st.button("Predict Yield"):
+    input_df = pd.DataFrame([{
         "Year": year,
         "Maize_Type": maize_type,
         "Region": region,
         "Soil_Quality": soil_quality,
         "Fertilizer_Type": fertilizer_type,
-        "Irrigated": irrigated_bin,
-        "Crop_Rotation": rotation_bin,
-        "Farmer_Experience": farmer_experience,
+        "Irrigated": irrigated,
+        "Crop_Rotation": crop_rotation,
+        "Farmer_Experience": experience,
         "Area_ha": area,
         "Rainfall_mm": rainfall,
         "Avg_Temp_C": temperature,
-        "Fertilizer_kg_ha": fertilizer_kg_ha
+        "Fertilizer_kg_ha": fertilizer_kg
     }])
 
-    # Ensure the feature columns are in the same order as model expects
-    expected_columns = [
-        "Year", "Maize_Type", "Region", "Soil_Quality",
-        "Fertilizer_Type", "Irrigated", "Crop_Rotation",
-        "Farmer_Experience", "Area_ha", "Rainfall_mm",
-        "Avg_Temp_C", "Fertilizer_kg_ha"
-    ]
-
-    input_data = input_data[expected_columns]
-
-    # Make prediction
-    try:
-        prediction = model.predict(input_data)[0]
-        st.success(f"✅ Estimated Yield: **{prediction:.2f} kg/ha**")
-    except Exception as e:
-        st.error(f"❌ Prediction failed: {str(e)}")
+    prediction = model_pipeline.predict(input_df)[0]
+    st.success(f"🌾 Predicted Maize Yield: **{prediction:.2f} kg/ha**")
