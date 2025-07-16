@@ -13,7 +13,7 @@ def load_data():
 df = load_data()
 
 # App title
-st.title("🌽 Mlimi adziwe Yield Predictor")
+st.title("🌽 Mlimi adziwe")
 st.markdown("🔍 Enter farm details below to estimate **maize yield in bags per hectare** (1 bag = 50kg).")
 
 # Input fields
