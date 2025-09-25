@@ -63,5 +63,7 @@ if st.button("Predict Maize Yield"):
     st.success(f"Your predicted maize yield is: **{total_yield_kg:.0f} kg** for your field.")
 
 st.caption("Yield is shown in kilograms. Land size input is in acres. Model: Linear Regression | Data: Malawi Maize Yield")
+st.caption("this streamlit app is for maize only")
+
 
 
