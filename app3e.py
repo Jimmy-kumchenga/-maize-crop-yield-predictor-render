@@ -12,7 +12,7 @@ feature_names = [
     "planting_date", "previous_crop", "irrigation"
 ]
 
-st.title("MLIMI ADZIWE)")
+st.title("MLIMI ADZIWE 🌽")
 st.header("Enter your farm details:")
 
 region = st.selectbox("Region", label_encoders["region"].classes_)
@@ -63,4 +63,5 @@ if st.button("Predict Maize Yield"):
     st.success(f"Your predicted maize yield is: **{total_yield_kg:.0f} kg** for your field.")
 
 st.caption("Yield is shown in kilograms. Land size input is in acres. Model: Linear Regression | Data: Malawi Maize Yield")
+
 
