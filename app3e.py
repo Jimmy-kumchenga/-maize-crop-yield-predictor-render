@@ -62,7 +62,7 @@ feature_names = [
     "planting_date", "previous_crop", "irrigation"
 ]
 
-st.title("Mlimi Adziwe🌽 )")
+st.title("Mlimi Adziwe🌽 ")
 st.header("Enter your farm details:")
 
 district = st.selectbox("Select District", list(districts_coords.keys()))
@@ -124,4 +124,5 @@ else:
         st.success(f"Your predicted maize yield is: **{total_yield_kg:.0f} kg** for your field.")
 
 st.caption("Yield is shown in kilograms. Land size input is in acres. Model: Linear Regression | Data: Malawi Maize Yield. Real-time weather data powered by OpenWeatherMap.")
+st.caption("This streamlit app is for maize only")
 
